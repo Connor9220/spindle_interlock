@@ -1,0 +1,82 @@
+component spindle_interlock """Prevents tool or chuck release when the spindle is 
+running""";
+
+pin in bit encoder-counts "connect this to the spindle encoder";
+
+pin in float spindle-speed-in """Pass-through the spindle speed request only if
+the release is not activated""";
+pin out float spindle-speed-out;
+
+pin out bit release-allowed "For operating an indicator lamp, for example";
+pin in bit release-request "The release request from the button/pedal";
+pin out bit release-out "the release signal to the valve";
+pin in bit release-state = 1 """This bit sets the value that is passed to
+"release-out". Toggle it to 0 or 1 to suit internal or external gripping,
+for example""";
+
+function _;
+
+license "GPL";
+author "Andy Pugh";
+
+pin out float vel;
+pin out unsigned st;
+pin out float timer;
+
+;;
+
+FUNCTION(_){
+    //static int st = 0;
+    static int last_counts;
+    static double last_timer;
+    static int encoder_vel = 0;
+    //static double timer;
+    //double vel;
+    
+    //timer += fperiod;
+    //if (last_counts != encoder_counts){
+    //    vel = abs(last_counts - encoder_counts) / timer;
+    //    last_timer = timer;
+    //    last_counts = encoder_counts;
+    //    timer = 0;
+    // }
+    //else
+    //{
+    //   vel = 1/(last_timer + timer);
+    //}
+    
+    vel = encoder_counts;
+
+    switch (st){
+        case 0: // spindle stopped, release allowed
+            if (vel > encoder_vel) {
+                st = 1; 
+                break;
+            }
+            if (release_request){
+                st = 2;
+                break;
+            }
+            release_out = ! release_state;
+            spindle_speed_out = spindle_speed_in;
+            release_allowed = 1;
+            break;
+        case 1: // spindle moving
+            // This state deliberately never changes the release-out pin
+            if (vel <= encoder_vel){
+                st = 0;
+                break;
+            }
+            spindle_speed_out = spindle_speed_in;
+            release_allowed = 0;
+            break;
+        case 2: // spindle released
+            if (! release_request ) {
+                release_out = ! release_state;
+                st = 0;
+                break;
+            }
+            release_out = release_state;
+            spindle_speed_out = 0;
+    }
+}
