@@ -14,7 +14,6 @@ pin in bit release-state = 1 """This bit sets the value that is passed to
 "release-out". Toggle it to 0 or 1 to suit internal or external gripping,
 for example""";
 pin in float limit  "Max RPM for tool";
-pin in float no_turn "Don't spin at all";
 
 function _;
 
@@ -68,19 +67,16 @@ FUNCTION(_){
             set_speed = 0;
     }
 
-    if (no_turn > 0)
-    {
-	spindle_speed_out = 0;
-    } else {
-        if (limit > 0) {
-            if (set_speed >= limit)
-            {
-                spindle_speed_out = limit;
-            } else  {
-                spindle_speed_out = set_speed;
-            }
-        } else {
+    if (limit > 0) {
+        if (set_speed >= limit)
+        {
+            spindle_speed_out = limit;
+        } else  {
             spindle_speed_out = set_speed;
         }
+    } else if (limit < 0) {
+        spindle_speed_out = 0;
+    } else {
+        spindle_speed_out = set_speed;
     }
 }
