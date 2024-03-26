@@ -13,6 +13,8 @@ pin out bit release-out "the release signal to the valve";
 pin in bit release-state = 1 """This bit sets the value that is passed to
 "release-out". Toggle it to 0 or 1 to suit internal or external gripping,
 for example""";
+pin in float limit  "Max RPM for tool";
+pin in float no_turn "Don't spin at all";
 
 function _;
 
@@ -26,24 +28,10 @@ pin out float timer;
 ;;
 
 FUNCTION(_){
-    //static int st = 0;
     static int last_counts;
     static double last_timer;
     static int encoder_vel = 0;
-    //static double timer;
-    //double vel;
-    
-    //timer += fperiod;
-    //if (last_counts != encoder_counts){
-    //    vel = abs(last_counts - encoder_counts) / timer;
-    //    last_timer = timer;
-    //    last_counts = encoder_counts;
-    //    timer = 0;
-    // }
-    //else
-    //{
-    //   vel = 1/(last_timer + timer);
-    //}
+    static float set_speed;
     
     vel = encoder_counts;
 
@@ -58,7 +46,7 @@ FUNCTION(_){
                 break;
             }
             release_out = ! release_state;
-            spindle_speed_out = spindle_speed_in;
+            set_speed = spindle_speed_in;
             release_allowed = 1;
             break;
         case 1: // spindle moving
@@ -67,7 +55,7 @@ FUNCTION(_){
                 st = 0;
                 break;
             }
-            spindle_speed_out = spindle_speed_in;
+            set_speed = spindle_speed_in;
             release_allowed = 0;
             break;
         case 2: // spindle released
@@ -77,6 +65,22 @@ FUNCTION(_){
                 break;
             }
             release_out = release_state;
-            spindle_speed_out = 0;
+            set_speed = 0;
+    }
+
+    if (no_turn > 0)
+    {
+	spindle_speed_out = 0;
+    } else {
+        if (limit > 0) {
+            if (set_speed >= limit)
+            {
+                spindle_speed_out = limit;
+            } else  {
+                spindle_speed_out = set_speed;
+            }
+        } else {
+            spindle_speed_out = set_speed;
+        }
     }
 }
