@@ -6,6 +6,9 @@ pin in bit encoder-counts "connect this to the spindle encoder";
 pin in float spindle-speed-in """Pass-through the spindle speed request only if
 the release is not activated""";
 pin out float spindle-speed-out;
+pin in float spindle-enable-in """Pass-through the spindle enable request only if
+the release is not activated""";
+pin out float spindle-enable-out;
 
 pin out bit release-allowed "For operating an indicator lamp, for example";
 pin in bit release-request "The release request from the button/pedal";
@@ -74,9 +77,12 @@ FUNCTION(_){
         } else  {
             spindle_speed_out = set_speed;
         }
-    } else if (limit < 0) {
+        spindle_enable_out = spindle_enable_in;
+    } else if (limit < 0 || set_speed == 0) {
+        spindle_enable_out = 0;
         spindle_speed_out = 0;
     } else {
+        spindle_enable_out = spindle_enable_in;
         spindle_speed_out = set_speed;
     }
 }
